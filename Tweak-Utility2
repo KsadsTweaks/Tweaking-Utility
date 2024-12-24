@@ -1,4 +1,4 @@
-# Ksads Style Windows Tweak Utility with Clean UI
+# Ksads Style Windows Tweak Utility with Categories and Load More Button
 
 # Load necessary .NET assemblies
 Add-Type -AssemblyName "System.Windows.Forms"
@@ -10,14 +10,28 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     Exit
 }
 
-# List of Tweaks
+# List of Tweaks categorized
 $tweaks = @(
-    @{ Description = "Disable Telemetry"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection"; Name = "AllowTelemetry"; Type = "DWORD"; Value = 0 },
-    @{ Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4 },
-    @{ Description = "Disable Feedback Requests"; Path = "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection"; Name = "DoNotShowFeedbackNotifications"; Type = "DWORD"; Value = 1 },
-    @{ Description = "Disable Cortana"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search"; Name = "AllowCortana"; Type = "DWORD"; Value = 0 },
-    @{ Description = "Disable Bing Search in Start Menu"; Path = "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Search"; Name = "BingSearchEnabled"; Type = "DWORD"; Value = 0 },
-    @{ Description = "Disable Advertising ID"; Path = "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo"; Name = "Enabled"; Type = "DWORD"; Value = 0 }
+    # Category 1: Privacy Tweaks
+    @{ Category = "Privacy Tweaks"; Description = "Disable Telemetry"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection"; Name = "AllowTelemetry"; Type = "DWORD"; Value = 0; Explanation = "Disables sending diagnostic and usage data to Microsoft." },
+    @{ Category = "Privacy Tweaks"; Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4; Explanation = "Disables the diagnostic tracking service (DiagTrack), which monitors system data." },
+    @{ Category = "Privacy Tweaks"; Description = "Disable Advertising ID"; Path = "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo"; Name = "Enabled"; Type = "DWORD"; Value = 0; Explanation = "Disables personalized ads in Windows based on your activity." },
+
+    # Category 2: Cortana and Search Tweaks
+    @{ Category = "Cortana & Search"; Description = "Disable Cortana"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search"; Name = "AllowCortana"; Type = "DWORD"; Value = 0; Explanation = "Completely disables Cortana, the digital assistant." },
+    @{ Category = "Cortana & Search"; Description = "Disable Bing Search in Start Menu"; Path = "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Search"; Name = "BingSearchEnabled"; Type = "DWORD"; Value = 0; Explanation = "Disables Bing search integration in the Start menu." },
+
+    # Category 3: System Tweaks
+    @{ Category = "System Tweaks"; Description = "Disable Feedback Requests"; Path = "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection"; Name = "DoNotShowFeedbackNotifications"; Type = "DWORD"; Value = 1; Explanation = "Disables the 'Send Feedback' notifications from Windows." },
+    @{ Category = "System Tweaks"; Description = "Disable Windows Defender"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows Defender"; Name = "DisableAntiSpyware"; Type = "DWORD"; Value = 1; Explanation = "Disables Windows Defender Antivirus." },
+    @{ Category = "System Tweaks"; Description = "Disable Windows Update"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate"; Name = "DisableOSUpgrade"; Type = "DWORD"; Value = 1; Explanation = "Prevents Windows Update from upgrading the system to a newer version." },
+
+    # Category 4: UI Tweaks
+    @{ Category = "UI Tweaks"; Description = "Remove Lock Screen"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Personalization"; Name = "NoLockScreen"; Type = "DWORD"; Value = 1; Explanation = "Removes the lock screen on Windows login." },
+    @{ Category = "UI Tweaks"; Description = "Disable Transparency Effects"; Path = "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize"; Name = "EnableTransparency"; Type = "DWORD"; Value = 0; Explanation = "Disables the transparency effects in UI elements such as taskbars and start menus." },
+
+    # Additional Tweaks
+    @{ Category = "Additional Tweaks"; Description = "Disable Edge Preloading"; Path = "HKCU:\\SOFTWARE\\Microsoft\\Edge\\Main"; Name = "PreloadHttpsURL"; Type = "DWORD"; Value = 0; Explanation = "Disables the automatic preloading of certain URLs in Microsoft Edge." }
 )
 
 # Function to Apply a Registry Tweak
@@ -66,22 +80,45 @@ function Display-Menu {
     $label.Size = New-Object System.Drawing.Size(200, 20)
     $form.Controls.Add($label)
 
-    # Create checkboxes for each tweak
+    # Create a Button to load more tweaks
+    $loadMoreButton = New-Object System.Windows.Forms.Button
+    $loadMoreButton.Text = "Load More Tweaks"
+    $loadMoreButton.Size = New-Object System.Drawing.Size(200, 40)
+    $loadMoreButton.Location = New-Object System.Drawing.Point(150, 320)
+    $loadMoreButton.BackColor = [System.Drawing.Color]::FromArgb(66, 135, 245)  # Blue color
+    $loadMoreButton.ForeColor = [System.Drawing.Color]::White
+    $form.Controls.Add($loadMoreButton)
+
+    # Create checkboxes for the first 5 tweaks
     $checkboxes = @()
     $yPosition = 60
-    for ($i = 0; $i -lt $tweaks.Count; $i++) {
-        $tweak = $tweaks[$i]
-        $checkbox = New-Object System.Windows.Forms.CheckBox
-        $checkbox.Text = $tweak.Description
-        $checkbox.ForeColor = [System.Drawing.Color]::White
-        $checkbox.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)
-        $checkbox.Location = New-Object System.Drawing.Point(50, $yPosition)
-        $checkbox.Size = New-Object System.Drawing.Size(400, 20)
-        $checkbox.Tag = $tweak
-        $form.Controls.Add($checkbox)
-        $checkboxes += $checkbox
-        $yPosition += 30  # Adjust position for the next checkbox
+    $selectedTweaks = @()
+
+    # Function to display tweaks in categories
+    function Display-Tweaks ($tweaksToDisplay) {
+        foreach ($tweak in $tweaksToDisplay) {
+            $checkbox = New-Object System.Windows.Forms.CheckBox
+            $checkbox.Text = "$($tweak.Description) - $($tweak.Explanation)"
+            $checkbox.ForeColor = [System.Drawing.Color]::White
+            $checkbox.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)
+            $checkbox.Location = New-Object System.Drawing.Point(50, $yPosition)
+            $checkbox.Size = New-Object System.Drawing.Size(400, 40)
+            $checkbox.Tag = $tweak
+            $form.Controls.Add($checkbox)
+            $checkboxes += $checkbox
+            $yPosition += 40  # Adjust position for the next checkbox
+        }
     }
+
+    # Initial display of tweaks (first 5)
+    Display-Tweaks -tweaksToDisplay $tweaks[0..4]
+
+    # Action for 'Load More Tweaks' Button - show more tweaks
+    $loadMoreButton.Add_Click({
+        # Display the next set of tweaks (category-wise)
+        Display-Tweaks -tweaksToDisplay $tweaks[5..$tweaks.Count - 1]
+        $form.Controls.Remove($loadMoreButton)  # Remove the "Load More" button after use
+    })
 
     # Create the 'Apply Tweaks' button
     $applyButton = New-Object System.Windows.Forms.Button
