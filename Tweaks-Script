@@ -1,0 +1,74 @@
+# Ksads Style Windows Tweak Utility for PowerShell
+
+# Check for Administrator Privileges
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "This script requires administrator privileges." -ForegroundColor Red
+    Exit
+}
+
+# List of Tweaks
+$tweaks = @(
+    @{ Description = "Disable Telemetry"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection"; Name = "AllowTelemetry"; Type = "DWORD"; Value = 0 },
+    @{ Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4 },
+    @{ Description = "Disable Feedback Requests"; Path = "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection"; Name = "DoNotShowFeedbackNotifications"; Type = "DWORD"; Value = 1 },
+    @{ Description = "Disable Cortana"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search"; Name = "AllowCortana"; Type = "DWORD"; Value = 0 },
+    @{ Description = "Disable Bing Search in Start Menu"; Path = "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Search"; Name = "BingSearchEnabled"; Type = "DWORD"; Value = 0 },
+    @{ Description = "Disable Advertising ID"; Path = "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo"; Name = "Enabled"; Type = "DWORD"; Value = 0 }
+)
+
+# Function to Apply a Registry Tweak
+function Apply-Tweak {
+    param (
+        [string]$Path,
+        [string]$Name,
+        [string]$Type,
+        [string]$Value
+    )
+    try {
+        if (-not (Test-Path $Path)) {
+            New-Item -Path $Path -Force | Out-Null
+        }
+        Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type
+        Write-Host "Applied: $Path\$Name = $Value" -ForegroundColor Green
+    } catch {
+        Write-Host "Failed to apply: $Path\$Name" -ForegroundColor Red
+    }
+}
+
+# Function to Apply Tweaks with Categories
+function Apply-Tweaks {
+    param (
+        [array]$SelectedTweaks
+    )
+    foreach ($tweak in $SelectedTweaks) {
+        Apply-Tweak -Path $tweak.Path -Name $tweak.Name -Type $tweak.Type -Value $tweak.Value
+    }
+}
+
+# Display Menu in Chris Titus Style
+function Display-Menu {
+    cls
+    Write-Host "===================================" -ForegroundColor Cyan
+    Write-Host "    Ksads Tweak Utility 0 Delay     " -ForegroundColor Cyan
+    Write-Host "===================================" -ForegroundColor Cyan
+
+    $selectedTweaks = @()
+    for ($i = 0; $i -lt $tweaks.Count; $i++) {
+        $tweak = $tweaks[$i]
+        $choice = Read-Host "$($i + 1). $($tweak.Description) (y/n)"
+        if ($choice -eq 'y') {
+            $selectedTweaks += $tweak
+        }
+    }
+
+    Write-Host "===================================" -ForegroundColor Cyan
+    Write-Host " Applying Selected Tweaks... " -ForegroundColor Yellow
+    Write-Host "===================================" -ForegroundColor Cyan
+    Apply-Tweaks -SelectedTweaks $selectedTweaks
+    Write-Host "===================================" -ForegroundColor Cyan
+    Write-Host " All tweaks have been applied! " -ForegroundColor Green
+    Write-Host "===================================" -ForegroundColor Cyan
+}
+
+# Run the Menu
+Display-Menu
