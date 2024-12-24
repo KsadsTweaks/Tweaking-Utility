@@ -41,20 +41,7 @@ function Create-RestorePoint {
     }
 }
 
-# Prompt user to create a restore point
-$restorePrompt = [System.Windows.Forms.MessageBox]::Show("Would you like to create a system restore point before applying tweaks?", "Create Restore Point", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
-
-$restoreCreated = $false
-if ($restorePrompt -eq [System.Windows.Forms.DialogResult]::Yes) {
-    if (Create-RestorePoint) {
-        [System.Windows.Forms.MessageBox]::Show("Restore point created successfully.", "Restore Point", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
-        $restoreCreated = $true
-    } else {
-        [System.Windows.Forms.MessageBox]::Show("Failed to create a restore point. The feature may not be available on this system.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
-    }
-}
-
-# List of Tweaks with Descriptions
+# List of Tweaks with Descriptions (Network tweaks removed)
 $tweaks = @(
     @{ Category = "Privacy"; Description = "Disable Telemetry"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Name = "AllowTelemetry"; Type = "DWORD"; Value = 0; },
     @{ Category = "Privacy"; Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4; },
@@ -65,27 +52,7 @@ $tweaks = @(
     @{ Category = "UI"; Description = "Remove Lock Screen"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"; Name = "NoLockScreen"; Type = "DWORD"; Value = 1; },
     @{ Category = "UI"; Description = "Disable Transparency Effects"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"; Name = "EnableTransparency"; Type = "DWORD"; Value = 0; },
     @{ Category = "Edge"; Description = "Disable Edge Preloading"; Path = "HKCU:\SOFTWARE\Microsoft\Edge\Main"; Name = "PreloadHttpsURL"; Type = "DWORD"; Value = 0; },
-    @{ Category = "Performance"; Description = "Disable Unnecessary Visual Effects"; Path = "HKCU:\Control Panel\Desktop"; Name = "VisualFXSetting"; Type = "REG_SZ"; Value = "2"; },
-    @{ Category = "Network"; Description = "Disable Network Discovery"; Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"; Name = "EnableNetworkDiscovery"; Type = "DWORD"; Value = 0; },
-
-    # Network Tweaks
-    @{ Category = "Network"; Description = "Disable Teredo"; Command = "netsh interface teredo set state disabled" },
-    @{ Category = "Network"; Description = "Disable 6to4"; Command = "netsh interface 6to4 set state disabled" },
-    @{ Category = "Network"; Description = "Reset Winsock"; Command = "netsh winsock reset" },
-    @{ Category = "Network"; Description = "Disable ISATAP"; Command = "netsh int isatap set state disable" },
-    @{ Category = "Network"; Description = "Enable Task Offload"; Command = "netsh int ip set global taskoffload=enabled" },
-    @{ Category = "Network"; Description = "Set Neighbor Cache Limit"; Command = "netsh int ip set global neighborcachelimit=4096" },
-    @{ Category = "Network"; Description = "Disable TCP Timestamps"; Command = "netsh int tcp set global timestamps=disabled" },
-    @{ Category = "Network"; Description = "Disable TCP Heuristics"; Command = "netsh int tcp set heuristics disabled" },
-    @{ Category = "Network"; Description = "Set TCP Auto-tuning to Normal"; Command = "netsh int tcp set global autotuninglevel=normal" },
-    @{ Category = "Network"; Description = "Set TCP Congestion Provider to Ctcp"; Command = "netsh int tcp set global congestionprovider=ctcp" },
-    @{ Category = "Network"; Description = "Enable TCP RSS"; Command = "netsh int tcp set global rss=enabled" },
-    @{ Category = "Network"; Description = "Disable TCP RSC"; Command = "netsh int tcp set global rsc=disabled" },
-    @{ Category = "Network"; Description = "Enable DCA"; Command = "netsh int tcp set global dca=enabled" },
-    @{ Category = "Network"; Description = "Enable NetDMA"; Command = "netsh int tcp set global netdma=enabled" },
-    @{ Category = "Network"; Description = "Disable Nonsack RTT Resiliency"; Command = "netsh int tcp set global nonsackrttresiliency=disabled" },
-    @{ Category = "Network"; Description = "Disable MPP"; Command = "netsh int tcp set security mpp=disabled" },
-    @{ Category = "Network"; Description = "Disable Security Profiles"; Command = "netsh int tcp set security profiles=disabled" }
+    @{ Category = "Performance"; Description = "Disable Unnecessary Visual Effects"; Path = "HKCU:\Control Panel\Desktop"; Name = "VisualFXSetting"; Type = "REG_SZ"; Value = "2"; }
 )
 
 # Save current registry values before applying changes for rollback
@@ -141,6 +108,13 @@ $applyButton.Dock = 'Bottom'
 $applyButton.Height = 30
 $form.Controls.Add($applyButton)
 
+# Create Restore Point Button
+$restoreButton = New-Object System.Windows.Forms.Button
+$restoreButton.Text = "Create Restore Point"
+$restoreButton.Dock = 'Bottom'
+$restoreButton.Height = 30
+$form.Controls.Add($restoreButton)
+
 # Rollback Button
 $rollbackButton = New-Object System.Windows.Forms.Button
 $rollbackButton.Text = "Rollback Changes"
@@ -148,18 +122,24 @@ $rollbackButton.Dock = 'Bottom'
 $rollbackButton.Height = 30
 $form.Controls.Add($rollbackButton)
 
+# Restore Point Button Click Event
+$restoreButton.Add_Click({
+    $restoreCreated = $false
+    if (Create-RestorePoint) {
+        [System.Windows.Forms.MessageBox]::Show("Restore point created successfully.", "Restore Point", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+        $restoreCreated = $true
+    } else {
+        [System.Windows.Forms.MessageBox]::Show("Failed to create a restore point. The feature may not be available on this system.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+    }
+})
+
 # Apply Button Click Event
 $applyButton.Add_Click({
     $results = @()
     foreach ($control in $flowLayoutPanel.Controls | Where-Object {$_.GetType().Name -eq "CheckBox"}) {
         if ($control.Checked) {
             $tweak = $control.Tag
-            if ($tweak.PSObject.Properties.Match("Command")) {
-                $result = Invoke-Expression $tweak.Command
-                Write-Host "Applied: $($tweak.Description)" -ForegroundColor Green
-            } else {
-                $result = Apply-Tweak -Path $tweak.Path -Name $tweak.Name -Type $tweak.Type -Value $tweak.Value -Description $tweak.Description
-            }
+            $result = Apply-Tweak -Path $tweak.Path -Name $tweak.Name -Type $tweak.Type -Value $tweak.Value -Description $tweak.Description
             $results += [PSCustomObject]@{
                 Description = $tweak.Description
                 Success = $result
