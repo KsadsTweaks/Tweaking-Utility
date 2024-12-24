@@ -73,16 +73,16 @@ foreach ($tweak in $tweaks) {
     $flowLayoutPanel.Controls.Add($checkbox)
 }
 
-# Create a button to open the System Restore page
+# Create a button to open the System Protection tab
 $restorePageButton = New-Object System.Windows.Forms.Button
-$restorePageButton.Text = "Open System Restore"
+$restorePageButton.Text = "Open System Protection"
 $restorePageButton.Dock = 'Top'
 $restorePageButton.Height = 30
 $form.Controls.Add($restorePageButton)
 
-# Button click event to open System Restore page
+# Button click event to open System Protection tab
 $restorePageButton.Add_Click({
-    Start-Process "rstrui.exe"
+    Start-Process "SystemPropertiesProtection.exe"
 })
 
 # Apply Button
