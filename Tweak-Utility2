@@ -148,11 +148,8 @@ $applyButton.Add_Click({
     }
     [System.Windows.Forms.MessageBox]::Show($message, "Results", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 
-    # Close form if restore point was created
-    if ($restoreCreated) {
-        [System.Windows.Forms.MessageBox]::Show("Changes are applied. You can rollback if needed.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
-    }
-    $form.Close()
+    # Don't close the form
+    # $form.Close()  # This line is removed so the form stays open
 })
 
 # Rollback Button Click Event
@@ -162,7 +159,8 @@ $rollbackButton.Add_Click({
         Set-ItemProperty -Path $tweak.Path -Name $tweak.Name -Value $value -Type $value.GetType().Name -ErrorAction SilentlyContinue
     }
     [System.Windows.Forms.MessageBox]::Show("Changes rolled back to previous settings.", "Rollback", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
-    $form.Close()
+    # Don't close the form
+    # $form.Close()  # This line is removed so the form stays open
 })
 
 $form.ShowDialog()
