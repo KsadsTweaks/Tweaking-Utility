@@ -15,7 +15,16 @@ function Apply-Tweak {
             Write-Warning "Registry key '$Path' does not exist. Creating..."
             New-Item -Path $Path -ItemType Directory -Force | Out-Null
         }
-        Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type -ErrorAction Stop
+
+        # Adjust type conversion based on registry type
+        $regType = switch ($Type) {
+            'REG_SZ' { [Microsoft.Win32.RegistryValueKind]::String }
+            'DWORD' { [Microsoft.Win32.RegistryValueKind]::DWord }
+            'REG_BINARY' { [Microsoft.Win32.RegistryValueKind]::Binary }
+            default { [Microsoft.Win32.RegistryValueKind]::Unknown }
+        }
+
+        Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $regType -ErrorAction Stop
         Write-Host "Applied: $($fullPath) = $Value  ($Description)" -ForegroundColor Green
         return $true
     }
@@ -31,9 +40,15 @@ function Create-RestorePoint {
         [string]$description = "Registry Tweaks Restore Point"
     )
     try {
-        $restorePoint = New-Object -ComObject "SystemRestore"
-        $restorePoint.CreateRestorePoint($description, 0, 100)
-        return $true
+        # Check if the System Restore service is available
+        $restoreService = Get-WmiObject -Class Win32_SystemRestore
+        if ($restoreService) {
+            $restoreService.CreateRestorePoint($description, 0, 100)
+            return $true
+        } else {
+            Write-Error "System Restore service is not available on this machine."
+            return $false
+        }
     }
     catch {
         Write-Error "Failed to create restore point: $_"
@@ -101,19 +116,19 @@ foreach ($tweak in $tweaks) {
     $flowLayoutPanel.Controls.Add($checkbox)
 }
 
+# Create Restore Point Button (Moved to above apply button)
+$restoreButton = New-Object System.Windows.Forms.Button
+$restoreButton.Text = "Create Restore Point"
+$restoreButton.Dock = 'Top'
+$restoreButton.Height = 30
+$form.Controls.Add($restoreButton)
+
 # Apply Button
 $applyButton = New-Object System.Windows.Forms.Button
 $applyButton.Text = "Apply Selected Tweaks"
 $applyButton.Dock = 'Bottom'
 $applyButton.Height = 30
 $form.Controls.Add($applyButton)
-
-# Create Restore Point Button
-$restoreButton = New-Object System.Windows.Forms.Button
-$restoreButton.Text = "Create Restore Point"
-$restoreButton.Dock = 'Bottom'
-$restoreButton.Height = 30
-$form.Controls.Add($restoreButton)
 
 # Rollback Button
 $rollbackButton = New-Object System.Windows.Forms.Button
