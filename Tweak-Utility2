@@ -30,16 +30,26 @@ function Create-RestorePoint {
     param (
         [string]$description = "Registry Tweaks Restore Point"
     )
-    $restorePoint = New-Object -ComObject "SystemRestore"
-    $restorePoint.CreateRestorePoint($description, 0, 100)
+    try {
+        $restorePoint = New-Object -ComObject "SystemRestore"
+        $restorePoint.CreateRestorePoint($description, 0, 100)
+        return $true
+    }
+    catch {
+        Write-Error "Failed to create a restore point: $($_.Exception.Message)"
+        return $false
+    }
 }
 
 # Prompt user to create a restore point
 $restorePrompt = [System.Windows.Forms.MessageBox]::Show("Would you like to create a system restore point before applying tweaks?", "Create Restore Point", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
 
 if ($restorePrompt -eq [System.Windows.Forms.DialogResult]::Yes) {
-    Create-RestorePoint
-    [System.Windows.Forms.MessageBox]::Show("Restore point created successfully.", "Restore Point", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    if (Create-RestorePoint) {
+        [System.Windows.Forms.MessageBox]::Show("Restore point created successfully.", "Restore Point", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    } else {
+        [System.Windows.Forms.MessageBox]::Show("Failed to create a restore point. Please ensure you're running this as an administrator.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+    }
 }
 
 # List of Tweaks with Descriptions
