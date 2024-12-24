@@ -54,7 +54,7 @@ if ($restorePrompt -eq [System.Windows.Forms.DialogResult]::Yes) {
     }
 }
 
-# List of Tweaks with Descriptions (Removed "Disable Windows Defender", "Pin This PC to Taskbar", and "Disable Windows Update")
+# List of Tweaks with Descriptions
 $tweaks = @(
     @{ Category = "Privacy"; Description = "Disable Telemetry"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Name = "AllowTelemetry"; Type = "DWORD"; Value = 0; },
     @{ Category = "Privacy"; Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4; },
@@ -66,15 +66,36 @@ $tweaks = @(
     @{ Category = "UI"; Description = "Disable Transparency Effects"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"; Name = "EnableTransparency"; Type = "DWORD"; Value = 0; },
     @{ Category = "Edge"; Description = "Disable Edge Preloading"; Path = "HKCU:\SOFTWARE\Microsoft\Edge\Main"; Name = "PreloadHttpsURL"; Type = "DWORD"; Value = 0; },
     @{ Category = "Performance"; Description = "Disable Unnecessary Visual Effects"; Path = "HKCU:\Control Panel\Desktop"; Name = "VisualFXSetting"; Type = "REG_SZ"; Value = "2"; },
-    @{ Category = "Network"; Description = "Disable Network Discovery"; Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"; Name = "EnableNetworkDiscovery"; Type = "DWORD"; Value = 0; }
+    @{ Category = "Network"; Description = "Disable Network Discovery"; Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"; Name = "EnableNetworkDiscovery"; Type = "DWORD"; Value = 0; },
+
+    # Network Tweaks
+    @{ Category = "Network"; Description = "Disable Teredo"; Command = "netsh interface teredo set state disabled" },
+    @{ Category = "Network"; Description = "Disable 6to4"; Command = "netsh interface 6to4 set state disabled" },
+    @{ Category = "Network"; Description = "Reset Winsock"; Command = "netsh winsock reset" },
+    @{ Category = "Network"; Description = "Disable ISATAP"; Command = "netsh int isatap set state disable" },
+    @{ Category = "Network"; Description = "Enable Task Offload"; Command = "netsh int ip set global taskoffload=enabled" },
+    @{ Category = "Network"; Description = "Set Neighbor Cache Limit"; Command = "netsh int ip set global neighborcachelimit=4096" },
+    @{ Category = "Network"; Description = "Disable TCP Timestamps"; Command = "netsh int tcp set global timestamps=disabled" },
+    @{ Category = "Network"; Description = "Disable TCP Heuristics"; Command = "netsh int tcp set heuristics disabled" },
+    @{ Category = "Network"; Description = "Set TCP Auto-tuning to Normal"; Command = "netsh int tcp set global autotuninglevel=normal" },
+    @{ Category = "Network"; Description = "Set TCP Congestion Provider to Ctcp"; Command = "netsh int tcp set global congestionprovider=ctcp" },
+    @{ Category = "Network"; Description = "Enable TCP RSS"; Command = "netsh int tcp set global rss=enabled" },
+    @{ Category = "Network"; Description = "Disable TCP RSC"; Command = "netsh int tcp set global rsc=disabled" },
+    @{ Category = "Network"; Description = "Enable DCA"; Command = "netsh int tcp set global dca=enabled" },
+    @{ Category = "Network"; Description = "Enable NetDMA"; Command = "netsh int tcp set global netdma=enabled" },
+    @{ Category = "Network"; Description = "Disable Nonsack RTT Resiliency"; Command = "netsh int tcp set global nonsackrttresiliency=disabled" },
+    @{ Category = "Network"; Description = "Disable MPP"; Command = "netsh int tcp set security mpp=disabled" },
+    @{ Category = "Network"; Description = "Disable Security Profiles"; Command = "netsh int tcp set security profiles=disabled" }
 )
 
 # Save current registry values before applying changes for rollback
 $previousValues = @{}
 foreach ($tweak in $tweaks) {
-    $currentValue = Get-ItemProperty -Path $tweak.Path -Name $tweak.Name -ErrorAction SilentlyContinue
-    if ($currentValue) {
-        $previousValues[$tweak.Description] = $currentValue
+    if ($tweak.PSObject.Properties.Match("Path")) {
+        $currentValue = Get-ItemProperty -Path $tweak.Path -Name $tweak.Name -ErrorAction SilentlyContinue
+        if ($currentValue) {
+            $previousValues[$tweak.Description] = $currentValue
+        }
     }
 }
 
@@ -128,7 +149,12 @@ $applyButton.Add_Click({
     foreach ($control in $flowLayoutPanel.Controls | Where-Object {$_.GetType().Name -eq "CheckBox"}) {
         if ($control.Checked) {
             $tweak = $control.Tag
-            $result = Apply-Tweak -Path $tweak.Path -Name $tweak.Name -Type $tweak.Type -Value $tweak.Value -Description $tweak.Description
+            if ($tweak.PSObject.Properties.Match("Command")) {
+                $result = Invoke-Expression $tweak.Command
+                Write-Host "Applied: $($tweak.Description)" -ForegroundColor Green
+            } else {
+                $result = Apply-Tweak -Path $tweak.Path -Name $tweak.Name -Type $tweak.Type -Value $tweak.Value -Description $tweak.Description
+            }
             $results += [PSCustomObject]@{
                 Description = $tweak.Description
                 Success = $result
@@ -146,7 +172,6 @@ $applyButton.Add_Click({
     [System.Windows.Forms.MessageBox]::Show($message, "Results", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 
     # Don't close the form
-    # $form.Close()  # This line is removed so the form stays open
 })
 
 # Rollback Button Click Event
@@ -156,8 +181,6 @@ $rollbackButton.Add_Click({
         Set-ItemProperty -Path $tweak.Path -Name $tweak.Name -Value $value -Type $value.GetType().Name -ErrorAction SilentlyContinue
     }
     [System.Windows.Forms.MessageBox]::Show("Changes rolled back to previous settings.", "Rollback", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
-    # Don't close the form
-    # $form.Close()  # This line is removed so the form stays open
 })
 
 $form.ShowDialog()
