@@ -15,16 +15,7 @@ function Apply-Tweak {
             Write-Warning "Registry key '$Path' does not exist. Creating..."
             New-Item -Path $Path -ItemType Directory -Force | Out-Null
         }
-
-        # Adjust type conversion based on registry type
-        $regType = switch ($Type) {
-            'REG_SZ' { [Microsoft.Win32.RegistryValueKind]::String }
-            'DWORD' { [Microsoft.Win32.RegistryValueKind]::DWord }
-            'REG_BINARY' { [Microsoft.Win32.RegistryValueKind]::Binary }
-            default { [Microsoft.Win32.RegistryValueKind]::Unknown }
-        }
-
-        Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $regType -ErrorAction Stop
+        Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type -ErrorAction Stop
         Write-Host "Applied: $($fullPath) = $Value  ($Description)" -ForegroundColor Green
         return $true
     }
@@ -34,20 +25,30 @@ function Apply-Tweak {
     }
 }
 
-# Create a system restore point
+# Function to create a system restore point
 function Create-RestorePoint {
     param (
         [string]$description = "Registry Tweaks Restore Point"
     )
     try {
-        # Check if the System Restore service is available
-        $restoreService = Get-WmiObject -Class Win32_SystemRestore
-        if ($restoreService) {
-            $restoreService.CreateRestorePoint($description, 0, 100)
-            return $true
+        # Check if System Restore is available on the system (via WMI)
+        $restoreService = Get-WmiObject -Class Win32_SystemRestore -ErrorAction SilentlyContinue
+        if ($null -eq $restoreService) {
+            Write-Warning "System Restore service is not available, attempting to use vssadmin."
+            # Fallback to using vssadmin to create a restore point
+            $vssResult = Invoke-Expression "vssadmin create shadow /for=C:"
+            if ($vssResult) {
+                Write-Host "Restore point created using vssadmin" -ForegroundColor Green
+                return $true
+            } else {
+                Write-Error "Failed to create restore point using vssadmin."
+                return $false
+            }
         } else {
-            Write-Error "System Restore service is not available on this machine."
-            return $false
+            # Create restore point via WMI (only works on systems that support it)
+            $restorePoint = New-Object -ComObject "SystemRestore"
+            $restorePoint.CreateRestorePoint($description, 0, 100)
+            return $true
         }
     }
     catch {
@@ -56,7 +57,7 @@ function Create-RestorePoint {
     }
 }
 
-# List of Tweaks with Descriptions (Network tweaks removed)
+# List of Tweaks with Descriptions (excluding network tweaks)
 $tweaks = @(
     @{ Category = "Privacy"; Description = "Disable Telemetry"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Name = "AllowTelemetry"; Type = "DWORD"; Value = 0; },
     @{ Category = "Privacy"; Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4; },
@@ -69,22 +70,6 @@ $tweaks = @(
     @{ Category = "Edge"; Description = "Disable Edge Preloading"; Path = "HKCU:\SOFTWARE\Microsoft\Edge\Main"; Name = "PreloadHttpsURL"; Type = "DWORD"; Value = 0; },
     @{ Category = "Performance"; Description = "Disable Unnecessary Visual Effects"; Path = "HKCU:\Control Panel\Desktop"; Name = "VisualFXSetting"; Type = "REG_SZ"; Value = "2"; }
 )
-
-# Save current registry values before applying changes for rollback
-$previousValues = @{}
-foreach ($tweak in $tweaks) {
-    if ($tweak.PSObject.Properties.Match("Path")) {
-        try {
-            $currentValue = Get-ItemProperty -Path $tweak.Path -Name $tweak.Name -ErrorAction SilentlyContinue
-            if ($currentValue) {
-                $previousValues[$tweak.Description] = $currentValue
-            }
-        }
-        catch {
-            Write-Warning "Failed to retrieve value for $($tweak.Description): $_"
-        }
-    }
-}
 
 # Create the Form
 $form = New-Object System.Windows.Forms.Form
@@ -100,7 +85,14 @@ $panel.Dock = 'Fill'
 $panel.AutoScroll = $true
 $form.Controls.Add($panel)
 
-# Add Tweaks to the Form
+# Create a button to trigger restore point creation
+$restoreButton = New-Object System.Windows.Forms.Button
+$restoreButton.Text = "Create Restore Point"
+$restoreButton.Dock = 'Top'
+$restoreButton.Height = 30
+$form.Controls.Add($restoreButton)
+
+# Create FlowLayoutPanel to display tweaks
 $flowLayoutPanel = New-Object System.Windows.Forms.FlowLayoutPanel
 $flowLayoutPanel.Dock = 'Fill'
 $flowLayoutPanel.AutoScroll = $true
@@ -116,13 +108,6 @@ foreach ($tweak in $tweaks) {
     $flowLayoutPanel.Controls.Add($checkbox)
 }
 
-# Create Restore Point Button (Moved to above apply button)
-$restoreButton = New-Object System.Windows.Forms.Button
-$restoreButton.Text = "Create Restore Point"
-$restoreButton.Dock = 'Top'
-$restoreButton.Height = 30
-$form.Controls.Add($restoreButton)
-
 # Apply Button
 $applyButton = New-Object System.Windows.Forms.Button
 $applyButton.Text = "Apply Selected Tweaks"
@@ -137,14 +122,13 @@ $rollbackButton.Dock = 'Bottom'
 $rollbackButton.Height = 30
 $form.Controls.Add($rollbackButton)
 
-# Restore Point Button Click Event
+# Restore Button Click Event
 $restoreButton.Add_Click({
-    $restoreCreated = $false
-    if (Create-RestorePoint) {
+    $restoreCreated = Create-RestorePoint
+    if ($restoreCreated) {
         [System.Windows.Forms.MessageBox]::Show("Restore point created successfully.", "Restore Point", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
-        $restoreCreated = $true
     } else {
-        [System.Windows.Forms.MessageBox]::Show("Failed to create a restore point. The feature may not be available on this system.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+        [System.Windows.Forms.MessageBox]::Show("Failed to create a restore point.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
     }
 })
 
@@ -163,15 +147,8 @@ $applyButton.Add_Click({
     }
     $successCount = ($results | Where-Object {$_.Success}).Count
     $failureCount = ($results | Where-Object {-not $_.Success}).Count
-
     $message = "Tweaks applied. Success: $successCount, Failures: $failureCount"
-    if ($failureCount -gt 0) {
-        $failureDetails = ($results | Where-Object {-not $_.Success} | ForEach-Object {$_.Description}) -join "`n"
-        $message += "`nFailures Details: $failureDetails"
-    }
     [System.Windows.Forms.MessageBox]::Show($message, "Results", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
-
-    # Don't close the form
 })
 
 # Rollback Button Click Event
