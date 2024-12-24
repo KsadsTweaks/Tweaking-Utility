@@ -53,15 +53,15 @@ function Apply-Tweaks {
 # Create the Form (window)
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "Ksads Windows Tweaks"
-$form.Size = New-Object System.Drawing.Size(600, 800)
+$form.Size = New-Object System.Drawing.Size(700, 900)
 $form.StartPosition = 'CenterScreen'
-$form.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)  # Dark background
+$form.BackColor = [System.Drawing.Color]::FromArgb(35, 35, 35)  # Dark background
 
 # Create a Label for instructions
 $label = New-Object System.Windows.Forms.Label
 $label.Text = "Select Tweaks to Apply:"
 $label.ForeColor = [System.Drawing.Color]::White
-$label.Location = New-Object System.Drawing.Point(150, 20)
+$label.Location = New-Object System.Drawing.Point(250, 20)
 $label.Size = New-Object System.Drawing.Size(200, 20)
 $form.Controls.Add($label)
 
@@ -76,17 +76,20 @@ function Display-Tweaks ($categoryName, $tweaksToDisplay) {
     $categoryLabel.Text = $categoryName
     $categoryLabel.ForeColor = [System.Drawing.Color]::FromArgb(66, 135, 245)
     $categoryLabel.Location = New-Object System.Drawing.Point(50, $yPosition)
-    $categoryLabel.Size = New-Object System.Drawing.Size(500, 20)
+    $categoryLabel.Size = New-Object System.Drawing.Size(600, 25)
+    $categoryLabel.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Bold)
     $form.Controls.Add($categoryLabel)
-    $yPosition += 30
+    $yPosition += 35
 
     foreach ($tweak in $tweaksToDisplay) {
         $checkbox = New-Object System.Windows.Forms.CheckBox
-        $checkbox.Text = "$($tweak.Description) - $($tweak.Explanation)"
+        $checkbox.Text = "$($tweak.Description)"
+        $checkbox.ToolTipText = "$($tweak.Explanation)"
         $checkbox.ForeColor = [System.Drawing.Color]::White
-        $checkbox.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)
+        $checkbox.BackColor = [System.Drawing.Color]::FromArgb(35, 35, 35)
         $checkbox.Location = New-Object System.Drawing.Point(50, $yPosition)
-        $checkbox.Size = New-Object System.Drawing.Size(500, 40)
+        $checkbox.Size = New-Object System.Drawing.Size(600, 40)
+        $checkbox.Font = New-Object System.Drawing.Font("Segoe UI", 10)
         $checkbox.Tag = $tweak
         $form.Controls.Add($checkbox)
         $checkboxes += $checkbox
@@ -112,8 +115,10 @@ $applyButton = New-Object System.Windows.Forms.Button
 $applyButton.Text = "Apply Selected Tweaks"
 $applyButton.ForeColor = [System.Drawing.Color]::White
 $applyButton.BackColor = [System.Drawing.Color]::FromArgb(66, 135, 245)
-$applyButton.Location = New-Object System.Drawing.Point(200, $yPosition + 20)
-$applyButton.Size = New-Object System.Drawing.Size(200, 40)
+$applyButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
+$applyButton.Font = New-Object System.Drawing.Font("Segoe UI", 12)
+$applyButton.Location = New-Object System.Drawing.Point(225, $yPosition + 20)
+$applyButton.Size = New-Object System.Drawing.Size(250, 40)
 $applyButton.Add_Click({
     foreach ($checkbox in $checkboxes) {
         if ($checkbox.Checked) {
@@ -121,9 +126,9 @@ $applyButton.Add_Click({
         }
     }
     Apply-Tweaks -SelectedTweaks $selectedTweaks
-    $form.Close()  # Close the form after applying tweaks
+    [System.Windows.Forms.MessageBox]::Show("Tweaks applied successfully!", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
 })
 $form.Controls.Add($applyButton)
 
-# Show the form
+# Show the Form
 $form.ShowDialog()
