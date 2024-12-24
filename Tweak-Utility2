@@ -68,7 +68,7 @@ function Display-Menu {
         $tweak = $tweaks[$i]
         $checkbox = New-Object System.Windows.Forms.CheckBox
         $checkbox.Text = $tweak.Description
-        $checkbox.Location = New-Object System.Drawing.Point(50, 50 + ($i * 30)) # Correcting the location creation
+        $checkbox.Location = [System.Drawing.Point]::new(50, 50 + ($i * 30))  # Corrected method to create Point
         $checkbox.Size = New-Object System.Drawing.Size(300, 20)
         $checkbox.Tag = $tweak  # Store the tweak as the tag of the checkbox
         $form.Controls.Add($checkbox)
