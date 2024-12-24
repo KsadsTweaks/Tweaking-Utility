@@ -25,7 +25,24 @@ function Apply-Tweak {
     }
 }
 
-# List of Tweaks
+# Create a system restore point
+function Create-RestorePoint {
+    param (
+        [string]$description = "Registry Tweaks Restore Point"
+    )
+    $restorePoint = New-Object -ComObject "SystemRestore"
+    $restorePoint.CreateRestorePoint($description, 0, 100)
+}
+
+# Prompt user to create a restore point
+$restorePrompt = [System.Windows.Forms.MessageBox]::Show("Would you like to create a system restore point before applying tweaks?", "Create Restore Point", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
+
+if ($restorePrompt -eq [System.Windows.Forms.DialogResult]::Yes) {
+    Create-RestorePoint
+    [System.Windows.Forms.MessageBox]::Show("Restore point created successfully.", "Restore Point", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+}
+
+# List of Tweaks with Descriptions
 $tweaks = @(
     @{ Category = "Privacy"; Description = "Disable Telemetry"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Name = "AllowTelemetry"; Type = "DWORD"; Value = 0; },
     @{ Category = "Privacy"; Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4; },
@@ -36,13 +53,17 @@ $tweaks = @(
     @{ Category = "System"; Description = "Disable Windows Update (Use with caution!)"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate"; Name = "DisableOSUpgrade"; Type = "DWORD"; Value = 1; },
     @{ Category = "UI"; Description = "Remove Lock Screen"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"; Name = "NoLockScreen"; Type = "DWORD"; Value = 1; },
     @{ Category = "UI"; Description = "Disable Transparency Effects"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"; Name = "EnableTransparency"; Type = "DWORD"; Value = 0; },
-    @{ Category = "Edge"; Description = "Disable Edge Preloading"; Path = "HKCU:\SOFTWARE\Microsoft\Edge\Main"; Name = "PreloadHttpsURL"; Type = "DWORD"; Value = 0; }
+    @{ Category = "Edge"; Description = "Disable Edge Preloading"; Path = "HKCU:\SOFTWARE\Microsoft\Edge\Main"; Name = "PreloadHttpsURL"; Type = "DWORD"; Value = 0; },
+    @{ Category = "Performance"; Description = "Disable Unnecessary Visual Effects"; Path = "HKCU:\Control Panel\Desktop"; Name = "VisualFXSetting"; Type = "REG_SZ"; Value = "2"; },
+    @{ Category = "Security"; Description = "Disable Windows Defender"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender"; Name = "DisableAntiSpyware"; Type = "DWORD"; Value = 1; },
+    @{ Category = "Network"; Description = "Disable Network Discovery"; Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"; Name = "EnableNetworkDiscovery"; Type = "DWORD"; Value = 0; },
+    @{ Category = "Taskbar"; Description = "Pin This PC to Taskbar"; Path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"; Name = "PinnedFolder"; Type = "REG_SZ"; Value = "This PC"; }
 )
 
 # Create the Form
 $form = New-Object System.Windows.Forms.Form
 $form.Text = "Windows Tweaks"
-$form.Size = New-Object System.Drawing.Size(500, 400)
+$form.Size = New-Object System.Drawing.Size(500, 500)
 $form.StartPosition = 'CenterScreen'
 $form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox = $false
