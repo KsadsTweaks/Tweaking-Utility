@@ -24,7 +24,7 @@ function Apply-Tweak {
 # List of Tweaks categorized
 $tweaks = @(
     @{ Category = "Privacy Tweaks"; Description = "Disable Telemetry"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection"; Name = "AllowTelemetry"; Type = "DWORD"; Value = 0; Explanation = "Disables sending diagnostic and usage data to Microsoft." },
-    @{ Category = "Privacy Tweaks"; Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4; Explanation = "Disables the diagnostic tracking service (DiagTrack), which monitors system data." },
+    @{ Category = "Privacy Tweks"; Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4; Explanation = "Disables the diagnostic tracking service (DiagTrack), which monitors system data." },
     @{ Category = "Privacy Tweaks"; Description = "Disable Advertising ID"; Path = "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo"; Name = "Enabled"; Type = "DWORD"; Value = 0; Explanation = "Disables personalized ads in Windows based on your activity." },
 
     @{ Category = "Cortana & Search"; Description = "Disable Cortana"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search"; Name = "AllowCortana"; Type = "DWORD"; Value = 0; Explanation = "Completely disables Cortana, the digital assistant." },
@@ -50,68 +50,80 @@ function Apply-Tweaks {
     }
 }
 
-# Function to Create and Display the UI
-function Display-Menu {
-    # Create the Form (window)
-    $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Ksads Windows Tweaks"
-    $form.Size = New-Object System.Drawing.Size(500, 600)
-    $form.StartPosition = 'CenterScreen'
-    $form.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)  # Dark background
+# Create the Form (window)
+$form = New-Object System.Windows.Forms.Form
+$form.Text = "Ksads Windows Tweaks"
+$form.Size = New-Object System.Drawing.Size(600, 800)
+$form.StartPosition = 'CenterScreen'
+$form.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)  # Dark background
 
-    # Create a Label for instructions
-    $label = New-Object System.Windows.Forms.Label
-    $label.Text = "Select Tweaks to Apply:"
-    $label.ForeColor = [System.Drawing.Color]::White
-    $label.Location = New-Object System.Drawing.Point(150, 20)
-    $label.Size = New-Object System.Drawing.Size(200, 20)
-    $form.Controls.Add($label)
+# Create a Label for instructions
+$label = New-Object System.Windows.Forms.Label
+$label.Text = "Select Tweaks to Apply:"
+$label.ForeColor = [System.Drawing.Color]::White
+$label.Location = New-Object System.Drawing.Point(150, 20)
+$label.Size = New-Object System.Drawing.Size(200, 20)
+$form.Controls.Add($label)
 
-    # Create checkboxes for the tweaks
-    $checkboxes = @()
-    $yPosition = 60
-    $selectedTweaks = @()
+# Create checkboxes for the tweaks
+$checkboxes = @()
+$yPosition = 60
+$selectedTweaks = @()
 
-    # Function to display tweaks in categories
-    function Display-Tweaks ($categoryName, $tweaksToDisplay) {
-        $categoryLabel = New-Object System.Windows.Forms.Label
-        $categoryLabel.Text = $categoryName
-        $categoryLabel.ForeColor = [System.Drawing.Color]::FromArgb(66, 135, 245)
-        $categoryLabel.Location = New-Object System.Drawing.Point(50, $yPosition)
-        $categoryLabel.Size = New-Object System.Drawing.Size(400, 20)
-        $form.Controls.Add($categoryLabel)
-        $yPosition += 20
+# Function to display tweaks in categories
+function Display-Tweaks ($categoryName, $tweaksToDisplay) {
+    $categoryLabel = New-Object System.Windows.Forms.Label
+    $categoryLabel.Text = $categoryName
+    $categoryLabel.ForeColor = [System.Drawing.Color]::FromArgb(66, 135, 245)
+    $categoryLabel.Location = New-Object System.Drawing.Point(50, $yPosition)
+    $categoryLabel.Size = New-Object System.Drawing.Size(500, 20)
+    $form.Controls.Add($categoryLabel)
+    $yPosition += 30
 
-        foreach ($tweak in $tweaksToDisplay) {
-            $checkbox = New-Object System.Windows.Forms.CheckBox
-            $checkbox.Text = "$($tweak.Description) - $($tweak.Explanation)"
-            $checkbox.ForeColor = [System.Drawing.Color]::White
-            $checkbox.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)
-            $checkbox.Location = New-Object System.Drawing.Point(50, $yPosition)
-            $checkbox.Size = New-Object System.Drawing.Size(400, 40)
-            $checkbox.Tag = $tweak
-            $form.Controls.Add($checkbox)
-            $checkboxes += $checkbox
-            $yPosition += 40  # Adjust position for the next checkbox
-        }
+    foreach ($tweak in $tweaksToDisplay) {
+        $checkbox = New-Object System.Windows.Forms.CheckBox
+        $checkbox.Text = "$($tweak.Description) - $($tweak.Explanation)"
+        $checkbox.ForeColor = [System.Drawing.Color]::White
+        $checkbox.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)
+        $checkbox.Location = New-Object System.Drawing.Point(50, $yPosition)
+        $checkbox.Size = New-Object System.Drawing.Size(500, 40)
+        $checkbox.Tag = $tweak
+        $form.Controls.Add($checkbox)
+        $checkboxes += $checkbox
+        $yPosition += 45  # Adjust position for the next checkbox
     }
-
-    # Display Tweaks Categorized
-    $privacyTweaks = $tweaks | Where-Object { $_.Category -eq "Privacy Tweaks" }
-    $cortanaTweaks = $tweaks | Where-Object { $_.Category -eq "Cortana & Search" }
-    $systemTweaks = $tweaks | Where-Object { $_.Category -eq "System Tweaks" }
-    $uiTweaks = $tweaks | Where-Object { $_.Category -eq "UI Tweaks" }
-    $additionalTweaks = $tweaks | Where-Object { $_.Category -eq "Additional Tweaks" }
-
-    Display-Tweaks -categoryName "Privacy Tweaks" -tweaksToDisplay $privacyTweaks
-    Display-Tweaks -categoryName "Cortana & Search" -tweaksToDisplay $cortanaTweaks
-    Display-Tweaks -categoryName "System Tweaks" -tweaksToDisplay $systemTweaks
-    Display-Tweaks -categoryName "UI Tweaks" -tweaksToDisplay $uiTweaks
-    Display-Tweaks -categoryName "Additional Tweaks" -tweaksToDisplay $additionalTweaks
-
-    # Show the form
-    $form.ShowDialog()
 }
 
-# Run the Display-Menu function
-Display-Menu
+# Display Tweaks Categorized
+$privacyTweaks = $tweaks | Where-Object { $_.Category -eq "Privacy Tweaks" }
+$cortanaTweaks = $tweaks | Where-Object { $_.Category -eq "Cortana & Search" }
+$systemTweaks = $tweaks | Where-Object { $_.Category -eq "System Tweaks" }
+$uiTweaks = $tweaks | Where-Object { $_.Category -eq "UI Tweaks" }
+$additionalTweaks = $tweaks | Where-Object { $_.Category -eq "Additional Tweaks" }
+
+Display-Tweaks -categoryName "Privacy Tweaks" -tweaksToDisplay $privacyTweaks
+Display-Tweaks -categoryName "Cortana & Search" -tweaksToDisplay $cortanaTweaks
+Display-Tweaks -categoryName "System Tweaks" -tweaksToDisplay $systemTweaks
+Display-Tweaks -categoryName "UI Tweaks" -tweaksToDisplay $uiTweaks
+Display-Tweaks -categoryName "Additional Tweaks" -tweaksToDisplay $additionalTweaks
+
+# Create Apply Button
+$applyButton = New-Object System.Windows.Forms.Button
+$applyButton.Text = "Apply Selected Tweaks"
+$applyButton.ForeColor = [System.Drawing.Color]::White
+$applyButton.BackColor = [System.Drawing.Color]::FromArgb(66, 135, 245)
+$applyButton.Location = New-Object System.Drawing.Point(200, $yPosition + 20)
+$applyButton.Size = New-Object System.Drawing.Size(200, 40)
+$applyButton.Add_Click({
+    foreach ($checkbox in $checkboxes) {
+        if ($checkbox.Checked) {
+            $selectedTweaks += $checkbox.Tag
+        }
+    }
+    Apply-Tweaks -SelectedTweaks $selectedTweaks
+    $form.Close()  # Close the form after applying tweaks
+})
+$form.Controls.Add($applyButton)
+
+# Show the form
+$form.ShowDialog()
