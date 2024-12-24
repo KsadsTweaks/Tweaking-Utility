@@ -1,6 +1,6 @@
 Add-Type -AssemblyName System.Windows.Forms
 
-# Function to apply registry tweaks with improved error handling and logging
+# Function to apply registry tweaks
 function Apply-Tweak {
     param(
         [string]$Path,
@@ -10,22 +10,22 @@ function Apply-Tweak {
         [string]$Description
     )
     try {
-        $fullpath = Join-Path $Path $Name
+        $fullPath = Join-Path $Path $Name
         if (-not (Test-Path -Path $Path -PathType Container)) {
             Write-Warning "Registry key '$Path' does not exist. Creating..."
             New-Item -Path $Path -ItemType Directory -Force | Out-Null
         }
         Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type -ErrorAction Stop
-        Write-Host "Applied: $($fullpath) = $Value  ($Description)" -ForegroundColor Green
+        Write-Host "Applied: $($fullPath) = $Value  ($Description)" -ForegroundColor Green
         return $true
     }
     catch {
-        Write-Error "Failed to apply $($fullpath): $($_.Exception.Message)"
+        Write-Error "Failed to apply $($fullPath): $($_.Exception.Message)"
         return $false
     }
 }
 
-# List of Tweaks - Improved Structure for Readability and Maintainability
+# List of Tweaks
 $tweaks = @(
     @{ Category = "Privacy"; Description = "Disable Telemetry"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Name = "AllowTelemetry"; Type = "DWORD"; Value = 0; },
     @{ Category = "Privacy"; Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4; },
@@ -38,7 +38,6 @@ $tweaks = @(
     @{ Category = "UI"; Description = "Disable Transparency Effects"; Path = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize"; Name = "EnableTransparency"; Type = "DWORD"; Value = 0; },
     @{ Category = "Edge"; Description = "Disable Edge Preloading"; Path = "HKCU:\SOFTWARE\Microsoft\Edge\Main"; Name = "PreloadHttpsURL"; Type = "DWORD"; Value = 0; }
 )
-
 
 # Create the Form
 $form = New-Object System.Windows.Forms.Form
@@ -54,7 +53,7 @@ $panel.Dock = 'Fill'
 $panel.AutoScroll = $true
 $form.Controls.Add($panel)
 
-# Add Tweaks to the Form using a FlowLayoutPanel for better layout
+# Add Tweaks to the Form
 $flowLayoutPanel = New-Object System.Windows.Forms.FlowLayoutPanel
 $flowLayoutPanel.Dock = 'Fill'
 $flowLayoutPanel.AutoScroll = $true
@@ -73,11 +72,9 @@ foreach ($tweak in $tweaks) {
 # Apply Button
 $applyButton = New-Object System.Windows.Forms.Button
 $applyButton.Text = "Apply Selected Tweaks"
-$applyButton.Anchor = 'Bottom, Left'
-$applyButton.Margin = New-Object System.Windows.Forms.Padding(10, 10, 10, 10) # Add some margin
-$applyButton.DialogResult = 'OK'
-$form.Controls.Add($applyButton) # Ensure the button is added to the form
-
+$applyButton.Dock = 'Bottom' # Dock the button to the bottom of the form
+$applyButton.Height = 30
+$form.Controls.Add($applyButton)
 
 $applyButton.Add_Click({
     $results = @()
