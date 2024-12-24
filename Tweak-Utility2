@@ -31,12 +31,12 @@ function Create-RestorePoint {
         [string]$description = "Registry Tweaks Restore Point"
     )
     try {
-        # Check if the SystemRestore COM object is available
         $restorePoint = New-Object -ComObject "SystemRestore"
         $restorePoint.CreateRestorePoint($description, 0, 100)
         return $true
     }
     catch {
+        Write-Error "Failed to create restore point: $_"
         return $false
     }
 }
@@ -44,9 +44,11 @@ function Create-RestorePoint {
 # Prompt user to create a restore point
 $restorePrompt = [System.Windows.Forms.MessageBox]::Show("Would you like to create a system restore point before applying tweaks?", "Create Restore Point", [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Question)
 
+$restoreCreated = $false
 if ($restorePrompt -eq [System.Windows.Forms.DialogResult]::Yes) {
     if (Create-RestorePoint) {
         [System.Windows.Forms.MessageBox]::Show("Restore point created successfully.", "Restore Point", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+        $restoreCreated = $true
     } else {
         [System.Windows.Forms.MessageBox]::Show("Failed to create a restore point. The feature may not be available on this system.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
     }
@@ -69,6 +71,15 @@ $tweaks = @(
     @{ Category = "Network"; Description = "Disable Network Discovery"; Path = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"; Name = "EnableNetworkDiscovery"; Type = "DWORD"; Value = 0; },
     @{ Category = "Taskbar"; Description = "Pin This PC to Taskbar"; Path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"; Name = "PinnedFolder"; Type = "REG_SZ"; Value = "This PC"; }
 )
+
+# Save current registry values before applying changes for rollback
+$previousValues = @{}
+foreach ($tweak in $tweaks) {
+    $currentValue = Get-ItemProperty -Path $tweak.Path -Name $tweak.Name -ErrorAction SilentlyContinue
+    if ($currentValue) {
+        $previousValues[$tweak.Description] = $currentValue
+    }
+}
 
 # Create the Form
 $form = New-Object System.Windows.Forms.Form
@@ -103,15 +114,22 @@ foreach ($tweak in $tweaks) {
 # Apply Button
 $applyButton = New-Object System.Windows.Forms.Button
 $applyButton.Text = "Apply Selected Tweaks"
-$applyButton.Dock = 'Bottom' # Dock the button to the bottom of the form
+$applyButton.Dock = 'Bottom'
 $applyButton.Height = 30
 $form.Controls.Add($applyButton)
 
+# Rollback Button
+$rollbackButton = New-Object System.Windows.Forms.Button
+$rollbackButton.Text = "Rollback Changes"
+$rollbackButton.Dock = 'Bottom'
+$rollbackButton.Height = 30
+$form.Controls.Add($rollbackButton)
+
+# Apply Button Click Event
 $applyButton.Add_Click({
     $results = @()
     foreach ($control in $flowLayoutPanel.Controls | Where-Object {$_.GetType().Name -eq "CheckBox"}) {
         if ($control.Checked) {
-            # Unpack the tagged tweak properties explicitly
             $tweak = $control.Tag
             $result = Apply-Tweak -Path $tweak.Path -Name $tweak.Name -Type $tweak.Type -Value $tweak.Value -Description $tweak.Description
             $results += [PSCustomObject]@{
@@ -129,6 +147,21 @@ $applyButton.Add_Click({
         $message += "`nFailures Details: $failureDetails"
     }
     [System.Windows.Forms.MessageBox]::Show($message, "Results", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+
+    # Close form if restore point was created
+    if ($restoreCreated) {
+        [System.Windows.Forms.MessageBox]::Show("Changes are applied. You can rollback if needed.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    }
+    $form.Close()
+})
+
+# Rollback Button Click Event
+$rollbackButton.Add_Click({
+    foreach ($tweak in $previousValues.Keys) {
+        $value = $previousValues[$tweak]
+        Set-ItemProperty -Path $tweak.Path -Name $tweak.Name -Value $value -Type $value.GetType().Name -ErrorAction SilentlyContinue
+    }
+    [System.Windows.Forms.MessageBox]::Show("Changes rolled back to previous settings.", "Rollback", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
     $form.Close()
 })
 
