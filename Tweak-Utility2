@@ -31,12 +31,12 @@ function Create-RestorePoint {
         [string]$description = "Registry Tweaks Restore Point"
     )
     try {
+        # Check if the SystemRestore COM object is available
         $restorePoint = New-Object -ComObject "SystemRestore"
         $restorePoint.CreateRestorePoint($description, 0, 100)
         return $true
     }
     catch {
-        Write-Error "Failed to create a restore point: $($_.Exception.Message)"
         return $false
     }
 }
@@ -48,7 +48,7 @@ if ($restorePrompt -eq [System.Windows.Forms.DialogResult]::Yes) {
     if (Create-RestorePoint) {
         [System.Windows.Forms.MessageBox]::Show("Restore point created successfully.", "Restore Point", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
     } else {
-        [System.Windows.Forms.MessageBox]::Show("Failed to create a restore point. Please ensure you're running this as an administrator.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+        [System.Windows.Forms.MessageBox]::Show("Failed to create a restore point. The feature may not be available on this system.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
     }
 }
 
