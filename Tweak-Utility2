@@ -92,9 +92,14 @@ $tweaks = @(
 $previousValues = @{}
 foreach ($tweak in $tweaks) {
     if ($tweak.PSObject.Properties.Match("Path")) {
-        $currentValue = Get-ItemProperty -Path $tweak.Path -Name $tweak.Name -ErrorAction SilentlyContinue
-        if ($currentValue) {
-            $previousValues[$tweak.Description] = $currentValue
+        try {
+            $currentValue = Get-ItemProperty -Path $tweak.Path -Name $tweak.Name -ErrorAction SilentlyContinue
+            if ($currentValue) {
+                $previousValues[$tweak.Description] = $currentValue
+            }
+        }
+        catch {
+            Write-Warning "Failed to retrieve value for $($tweak.Description): $_"
         }
     }
 }
