@@ -1,7 +1,8 @@
-# Ksads Style Windows Tweak Utility with GitHub Script Download for PowerShell
+# Ksads Style Windows Tweak Utility with Clean UI
 
-# Load the necessary .NET assembly for Windows Forms
+# Load necessary .NET assemblies
 Add-Type -AssemblyName "System.Windows.Forms"
+Add-Type -AssemblyName "System.Drawing"
 
 # Check for Administrator Privileges
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -38,7 +39,7 @@ function Apply-Tweak {
     }
 }
 
-# Function to Apply Tweaks with Categories
+# Function to Apply Tweaks
 function Apply-Tweaks {
     param (
         [array]$SelectedTweaks
@@ -48,42 +49,50 @@ function Apply-Tweaks {
     }
 }
 
-# Display Menu with Windows Forms UI
+# Create and Display UI Form
 function Display-Menu {
     # Create the Form (window)
     $form = New-Object System.Windows.Forms.Form
-    $form.Text = "Ksads Tweak Utility"
-    $form.Size = New-Object System.Drawing.Size(400, 400)
+    $form.Text = "Ksads Windows Tweaks"
+    $form.Size = New-Object System.Drawing.Size(500, 400)
+    $form.StartPosition = 'CenterScreen'
+    $form.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)  # Dark background
 
     # Create a Label for instructions
     $label = New-Object System.Windows.Forms.Label
-    $label.Text = "Please choose the tweaks to apply:"
-    $label.Location = New-Object System.Drawing.Point(100, 20)
+    $label.Text = "Select Tweaks to Apply:"
+    $label.ForeColor = [System.Drawing.Color]::White
+    $label.Location = New-Object System.Drawing.Point(150, 20)
     $label.Size = New-Object System.Drawing.Size(200, 20)
     $form.Controls.Add($label)
 
     # Create checkboxes for each tweak
     $checkboxes = @()
+    $yPosition = 60
     for ($i = 0; $i -lt $tweaks.Count; $i++) {
         $tweak = $tweaks[$i]
         $checkbox = New-Object System.Windows.Forms.CheckBox
         $checkbox.Text = $tweak.Description
-        # Correcting location with explicit Point creation using New-Object for Point
-        $checkbox.Location = New-Object System.Drawing.Point(50, 50 + ($i * 30))  # Creating a Point explicitly
-        $checkbox.Size = New-Object System.Drawing.Size(300, 20)
-        $checkbox.Tag = $tweak  # Store the tweak as the tag of the checkbox
+        $checkbox.ForeColor = [System.Drawing.Color]::White
+        $checkbox.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)
+        $checkbox.Location = New-Object System.Drawing.Point(50, $yPosition)
+        $checkbox.Size = New-Object System.Drawing.Size(400, 20)
+        $checkbox.Tag = $tweak
         $form.Controls.Add($checkbox)
         $checkboxes += $checkbox
+        $yPosition += 30  # Adjust position for the next checkbox
     }
 
     # Create the 'Apply Tweaks' button
     $applyButton = New-Object System.Windows.Forms.Button
     $applyButton.Text = "Apply Selected Tweaks"
-    $applyButton.Size = New-Object System.Drawing.Size(150, 30)
-    $applyButton.Location = New-Object System.Drawing.Point(125, 300)
+    $applyButton.Size = New-Object System.Drawing.Size(200, 40)
+    $applyButton.Location = New-Object System.Drawing.Point(150, $yPosition)
+    $applyButton.BackColor = [System.Drawing.Color]::FromArgb(66, 135, 245)  # Blue color
+    $applyButton.ForeColor = [System.Drawing.Color]::White
     $form.Controls.Add($applyButton)
 
-    # Action for 'Apply Tweaks' Button - applies selected tweaks
+    # Action for 'Apply Tweaks' Button - apply selected tweaks
     $applyButton.Add_Click({
         $selectedTweaks = @()
         foreach ($checkbox in $checkboxes) {
