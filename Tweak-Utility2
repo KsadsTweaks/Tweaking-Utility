@@ -80,9 +80,11 @@ $applyButton.Add_Click({
     $results = @()
     foreach ($control in $flowLayoutPanel.Controls | Where-Object {$_.GetType().Name -eq "CheckBox"}) {
         if ($control.Checked) {
-            $result = Apply-Tweak @($control.Tag)
+            # Unpack the tagged tweak properties explicitly
+            $tweak = $control.Tag
+            $result = Apply-Tweak -Path $tweak.Path -Name $tweak.Name -Type $tweak.Type -Value $tweak.Value -Description $tweak.Description
             $results += [PSCustomObject]@{
-                Description = $control.Tag.Description
+                Description = $tweak.Description
                 Success = $result
             }
         }
