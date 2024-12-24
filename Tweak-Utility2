@@ -1,0 +1,113 @@
+# Ksads Style Windows Tweak Utility for PowerShell
+
+# Load the necessary .NET assembly for Windows Forms
+Add-Type -AssemblyName "System.Windows.Forms"
+
+# Check for Administrator Privileges
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "This script requires administrator privileges." -ForegroundColor Red
+    Exit
+}
+
+# List of Tweaks
+$tweaks = @(
+    @{ Description = "Disable Telemetry"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\DataCollection"; Name = "AllowTelemetry"; Type = "DWORD"; Value = 0 },
+    @{ Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4 },
+    @{ Description = "Disable Feedback Requests"; Path = "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\DataCollection"; Name = "DoNotShowFeedbackNotifications"; Type = "DWORD"; Value = 1 },
+    @{ Description = "Disable Cortana"; Path = "HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\Windows Search"; Name = "AllowCortana"; Type = "DWORD"; Value = 0 },
+    @{ Description = "Disable Bing Search in Start Menu"; Path = "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Search"; Name = "BingSearchEnabled"; Type = "DWORD"; Value = 0 },
+    @{ Description = "Disable Advertising ID"; Path = "HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AdvertisingInfo"; Name = "Enabled"; Type = "DWORD"; Value = 0 }
+)
+
+# Function to Apply a Registry Tweak
+function Apply-Tweak {
+    param (
+        [string]$Path,
+        [string]$Name,
+        [string]$Type,
+        [string]$Value
+    )
+    try {
+        if (-not (Test-Path $Path)) {
+            New-Item -Path $Path -Force | Out-Null
+        }
+        Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type
+        Write-Host "Applied: $Path\$Name = $Value" -ForegroundColor Green
+    } catch {
+        Write-Host "Failed to apply: $Path\$Name" -ForegroundColor Red
+    }
+}
+
+# Function to Apply Tweaks with Categories
+function Apply-Tweaks {
+    param (
+        [array]$SelectedTweaks
+    )
+    foreach ($tweak in $SelectedTweaks) {
+        Apply-Tweak -Path $tweak.Path -Name $tweak.Name -Type $tweak.Type -Value $tweak.Value
+    }
+}
+
+# Display Menu with Windows Forms UI
+function Display-Menu {
+    # Create the Form (window)
+    $form = New-Object System.Windows.Forms.Form
+    $form.Text = "Ksads Tweak Utility"
+    $form.Size = New-Object System.Drawing.Size(400, 400)
+
+    # Create a Label for instructions
+    $label = New-Object System.Windows.Forms.Label
+    $label.Text = "Please choose the tweaks to apply:"
+    $label.Location = New-Object System.Drawing.Point(100, 20)
+    $label.Size = New-Object System.Drawing.Size(200, 20)
+    $form.Controls.Add($label)
+
+    # Create checkboxes for each tweak
+    $checkboxes = @()
+    for ($i = 0; $i -lt $tweaks.Count; $i++) {
+        $tweak = $tweaks[$i]
+        $checkbox = New-Object System.Windows.Forms.CheckBox
+        $checkbox.Text = $tweak.Description
+        $checkbox.Location = New-Object System.Drawing.Point(50, 50 + ($i * 30))
+        $checkbox.Size = New-Object System.Drawing.Size(300, 20)
+        $checkbox.Tag = $tweak  # Store the tweak as the tag of the checkbox
+        $form.Controls.Add($checkbox)
+        $checkboxes += $checkbox
+    }
+
+    # Create the 'Apply Tweaks' button
+    $applyButton = New-Object System.Windows.Forms.Button
+    $applyButton.Text = "Apply Selected Tweaks"
+    $applyButton.Size = New-Object System.Drawing.Size(150, 30)
+    $applyButton.Location = New-Object System.Drawing.Point(125, 300)
+    $form.Controls.Add($applyButton)
+
+    # Action for 'Apply Tweaks' Button - applies selected tweaks
+    $applyButton.Add_Click({
+        $selectedTweaks = @()
+        foreach ($checkbox in $checkboxes) {
+            if ($checkbox.Checked) {
+                $selectedTweaks += $checkbox.Tag
+            }
+        }
+        
+        if ($selectedTweaks.Count -gt 0) {
+            Write-Host "===================================" -ForegroundColor Cyan
+            Write-Host " Applying Selected Tweaks... " -ForegroundColor Yellow
+            Write-Host "===================================" -ForegroundColor Cyan
+            Apply-Tweaks -SelectedTweaks $selectedTweaks
+            Write-Host "===================================" -ForegroundColor Cyan
+            Write-Host " All tweaks have been applied!" -ForegroundColor Green
+            Write-Host "===================================" -ForegroundColor Cyan
+        } else {
+            Write-Host "No tweaks selected." -ForegroundColor Red
+        }
+        $form.Close()  # Close the form after applying tweaks
+    })
+
+    # Show the form and wait for user input
+    $form.ShowDialog()
+}
+
+# Run the Menu
+Display-Menu
