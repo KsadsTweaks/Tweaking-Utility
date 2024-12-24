@@ -89,7 +89,7 @@ function Display-Menu {
     $loadMoreButton.ForeColor = [System.Drawing.Color]::White
     $form.Controls.Add($loadMoreButton)
 
-    # Create checkboxes for the first 5 tweaks
+    # Create checkboxes for the tweaks
     $checkboxes = @()
     $yPosition = 60
     $selectedTweaks = @()
@@ -129,7 +129,12 @@ function Display-Menu {
     Display-Tweaks -categoryName "Cortana & Search" -tweaksToDisplay $cortanaTweaks
     Display-Tweaks -categoryName "System Tweaks" -tweaksToDisplay $systemTweaks
     Display-Tweaks -categoryName "UI Tweaks" -tweaksToDisplay $uiTweaks
-    Display-Tweaks -categoryName "Additional Tweaks" -tweaksToDisplay $additionalTweaks
+
+    # Action for Load More Button
+    $loadMoreButton.Add_Click({
+        # Add additional tweaks
+        Display-Tweaks -categoryName "Additional Tweaks" -tweaksToDisplay $additionalTweaks
+    })
 
     # Show the form
     $form.ShowDialog()
