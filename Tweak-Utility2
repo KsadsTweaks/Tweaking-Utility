@@ -128,4 +128,12 @@ function Display-Menu {
     Display-Tweaks -categoryName "Privacy Tweaks" -tweaksToDisplay $privacyTweaks
     Display-Tweaks -categoryName "Cortana & Search" -tweaksToDisplay $cortanaTweaks
     Display-Tweaks -categoryName "System Tweaks" -tweaksToDisplay $systemTweaks
-    Display-T
+    Display-Tweaks -categoryName "UI Tweaks" -tweaksToDisplay $uiTweaks
+    Display-Tweaks -categoryName "Additional Tweaks" -tweaksToDisplay $additionalTweaks
+
+    # Show the form
+    $form.ShowDialog()
+}
+
+# Run the display menu
+Display-Menu
