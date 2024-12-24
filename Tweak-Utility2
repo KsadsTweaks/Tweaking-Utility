@@ -1,8 +1,8 @@
 Add-Type -AssemblyName System.Windows.Forms
 
-# Function to Apply Registry Tweaks with improved error handling and logging
+# Function to apply registry tweaks with improved error handling and logging
 function Apply-Tweak {
-    param (
+    param(
         [string]$Path,
         [string]$Name,
         [string]$Type,
@@ -25,7 +25,7 @@ function Apply-Tweak {
     }
 }
 
-# List of Tweaks - Improved Structure for Readability
+# List of Tweaks - Improved Structure for Readability and Maintainability
 $tweaks = @(
     @{ Category = "Privacy"; Description = "Disable Telemetry"; Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"; Name = "AllowTelemetry"; Type = "DWORD"; Value = 0; },
     @{ Category = "Privacy"; Description = "Disable Diagnostic Tracking Services"; Path = "HKLM:\SYSTEM\CurrentControlSet\Services\DiagTrack"; Name = "Start"; Type = "DWORD"; Value = 4; },
@@ -45,40 +45,43 @@ $form = New-Object System.Windows.Forms.Form
 $form.Text = "Windows Tweaks"
 $form.Size = New-Object System.Drawing.Size(500, 400)
 $form.StartPosition = 'CenterScreen'
-$form.FormBorderStyle = 'FixedDialog' # Prevent resizing
+$form.FormBorderStyle = 'FixedDialog'
 $form.MaximizeBox = $false
 $form.MinimizeBox = $false
 
 $panel = New-Object System.Windows.Forms.Panel
 $panel.Dock = 'Fill'
-$panel.AutoScroll = $true # Allow scrolling if needed
+$panel.AutoScroll = $true
 $form.Controls.Add($panel)
 
-# Add Tweaks to the Form
-$yPosition = 10
+# Add Tweaks to the Form using a FlowLayoutPanel for better layout
+$flowLayoutPanel = New-Object System.Windows.Forms.FlowLayoutPanel
+$flowLayoutPanel.Dock = 'Fill'
+$flowLayoutPanel.AutoScroll = $true
+$flowLayoutPanel.FlowDirection = 'TopDown'
+$flowLayoutPanel.WrapContents = $true
+$panel.Controls.Add($flowLayoutPanel)
+
 foreach ($tweak in $tweaks) {
     $checkbox = New-Object System.Windows.Forms.CheckBox
     $checkbox.Text = "$($tweak.Category): $($tweak.Description)"
     $checkbox.AutoSize = $true
-    $checkbox.Location = New-Object System.Drawing.Point(10, $yPosition)
     $checkbox.Tag = $tweak
-    $panel.Controls.Add($checkbox)
-    $yPosition += $checkbox.Height + 5
+    $flowLayoutPanel.Controls.Add($checkbox)
 }
 
 # Apply Button
 $applyButton = New-Object System.Windows.Forms.Button
 $applyButton.Text = "Apply Selected Tweaks"
-$applyButton.Location = New-Object System.Drawing.Point(10, $yPosition + 10)
-$applyButton.Width = 480 # Set a fixed width
-$applyButton.Height = 30 # Set a fixed height
-$applyButton.Anchor = 'Bottom, Left' # Anchor to bottom-left
-$applyButton.DialogResult = 'OK' # Close form on click
-$form.Controls.Add($applyButton)
+$applyButton.Anchor = 'Bottom, Left'
+$applyButton.Margin = New-Object System.Windows.Forms.Padding(10, 10, 10, 10) # Add some margin
+$applyButton.DialogResult = 'OK'
+$form.Controls.Add($applyButton) # Ensure the button is added to the form
+
 
 $applyButton.Add_Click({
     $results = @()
-    foreach ($control in $panel.Controls | Where-Object {$_.GetType().Name -eq "CheckBox"}) {
+    foreach ($control in $flowLayoutPanel.Controls | Where-Object {$_.GetType().Name -eq "CheckBox"}) {
         if ($control.Checked) {
             $result = Apply-Tweak @($control.Tag)
             $results += [PSCustomObject]@{
