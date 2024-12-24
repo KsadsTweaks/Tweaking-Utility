@@ -68,7 +68,7 @@ function Display-Menu {
     # Create the Form (window)
     $form = New-Object System.Windows.Forms.Form
     $form.Text = "Ksads Windows Tweaks"
-    $form.Size = New-Object System.Drawing.Size(500, 400)
+    $form.Size = New-Object System.Drawing.Size(500, 600)
     $form.StartPosition = 'CenterScreen'
     $form.BackColor = [System.Drawing.Color]::FromArgb(33, 33, 33)  # Dark background
 
@@ -84,7 +84,7 @@ function Display-Menu {
     $loadMoreButton = New-Object System.Windows.Forms.Button
     $loadMoreButton.Text = "Load More Tweaks"
     $loadMoreButton.Size = New-Object System.Drawing.Size(200, 40)
-    $loadMoreButton.Location = New-Object System.Drawing.Point(150, 320)
+    $loadMoreButton.Location = New-Object System.Drawing.Point(150, 500)
     $loadMoreButton.BackColor = [System.Drawing.Color]::FromArgb(66, 135, 245)  # Blue color
     $loadMoreButton.ForeColor = [System.Drawing.Color]::White
     $form.Controls.Add($loadMoreButton)
@@ -95,7 +95,15 @@ function Display-Menu {
     $selectedTweaks = @()
 
     # Function to display tweaks in categories
-    function Display-Tweaks ($tweaksToDisplay) {
+    function Display-Tweaks ($categoryName, $tweaksToDisplay) {
+        $categoryLabel = New-Object System.Windows.Forms.Label
+        $categoryLabel.Text = $categoryName
+        $categoryLabel.ForeColor = [System.Drawing.Color]::FromArgb(66, 135, 245)
+        $categoryLabel.Location = New-Object System.Drawing.Point(50, $yPosition)
+        $categoryLabel.Size = New-Object System.Drawing.Size(400, 20)
+        $form.Controls.Add($categoryLabel)
+        $yPosition += 20
+
         foreach ($tweak in $tweaksToDisplay) {
             $checkbox = New-Object System.Windows.Forms.CheckBox
             $checkbox.Text = "$($tweak.Description) - $($tweak.Explanation)"
@@ -111,50 +119,13 @@ function Display-Menu {
     }
 
     # Initial display of tweaks (first 5)
-    Display-Tweaks -tweaksToDisplay $tweaks[0..4]
+    $privacyTweaks = $tweaks | Where-Object { $_.Category -eq "Privacy Tweaks" }
+    $cortanaTweaks = $tweaks | Where-Object { $_.Category -eq "Cortana & Search" }
+    $systemTweaks = $tweaks | Where-Object { $_.Category -eq "System Tweaks" }
+    $uiTweaks = $tweaks | Where-Object { $_.Category -eq "UI Tweaks" }
+    $additionalTweaks = $tweaks | Where-Object { $_.Category -eq "Additional Tweaks" }
 
-    # Action for 'Load More Tweaks' Button - show more tweaks
-    $loadMoreButton.Add_Click({
-        # Display the next set of tweaks (category-wise)
-        Display-Tweaks -tweaksToDisplay $tweaks[5..$tweaks.Count - 1]
-        $form.Controls.Remove($loadMoreButton)  # Remove the "Load More" button after use
-    })
-
-    # Create the 'Apply Tweaks' button
-    $applyButton = New-Object System.Windows.Forms.Button
-    $applyButton.Text = "Apply Selected Tweaks"
-    $applyButton.Size = New-Object System.Drawing.Size(200, 40)
-    $applyButton.Location = New-Object System.Drawing.Point(150, $yPosition)
-    $applyButton.BackColor = [System.Drawing.Color]::FromArgb(66, 135, 245)  # Blue color
-    $applyButton.ForeColor = [System.Drawing.Color]::White
-    $form.Controls.Add($applyButton)
-
-    # Action for 'Apply Tweaks' Button - apply selected tweaks
-    $applyButton.Add_Click({
-        $selectedTweaks = @()
-        foreach ($checkbox in $checkboxes) {
-            if ($checkbox.Checked) {
-                $selectedTweaks += $checkbox.Tag
-            }
-        }
-        
-        if ($selectedTweaks.Count -gt 0) {
-            Write-Host "===================================" -ForegroundColor Cyan
-            Write-Host " Applying Selected Tweaks... " -ForegroundColor Yellow
-            Write-Host "===================================" -ForegroundColor Cyan
-            Apply-Tweaks -SelectedTweaks $selectedTweaks
-            Write-Host "===================================" -ForegroundColor Cyan
-            Write-Host " All tweaks have been applied!" -ForegroundColor Green
-            Write-Host "===================================" -ForegroundColor Cyan
-        } else {
-            Write-Host "No tweaks selected." -ForegroundColor Red
-        }
-        $form.Close()  # Close the form after applying tweaks
-    })
-
-    # Show the form and wait for user input
-    $form.ShowDialog()
-}
-
-# Run the Menu
-Display-Menu
+    Display-Tweaks -categoryName "Privacy Tweaks" -tweaksToDisplay $privacyTweaks
+    Display-Tweaks -categoryName "Cortana & Search" -tweaksToDisplay $cortanaTweaks
+    Display-Tweaks -categoryName "System Tweaks" -tweaksToDisplay $systemTweaks
+    Display-T
